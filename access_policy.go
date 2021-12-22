@@ -12,6 +12,12 @@ import (
 	"github.com/pkg/errors"
 )
 
+type AccessApprovalGroup struct {
+	EmailListUuid   string   `json:"email_list_uuid,omitempty"`
+	EmailAddresses  []string `json:"email_addresses,omitempty"`
+	ApprovalsNeeded int      `json:"approvals_needed,omitempty"`
+}
+
 // AccessPolicy defines a policy for allowing or disallowing access to
 // one or more Access applications.
 type AccessPolicy struct {
@@ -21,6 +27,11 @@ type AccessPolicy struct {
 	CreatedAt  *time.Time `json:"created_at"`
 	UpdatedAt  *time.Time `json:"updated_at"`
 	Name       string     `json:"name"`
+
+	PurposeJustificationRequired *bool                 `json:"purpose_justification_required,omitempty"`
+	PurposeJustificationPrompt   *string               `json:"purpose_justification_prompt,omitempty"`
+	ApprovalRequired             *bool                 `json:"approval_required,omitempty"`
+	ApprovalGroups               []AccessApprovalGroup `json:"approval_groups"`
 
 	// The include policy works like an OR logical operator. The user must
 	// satisfy one of the rules.

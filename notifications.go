@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
+	"strconv"
 	"time"
 )
 
@@ -146,6 +148,27 @@ type NotificationAlertWithDescription struct {
 type NotificationAvailableAlertsResponse struct {
 	Response
 	Result NotificationsGroupedByProduct
+}
+
+// NotificationHistory describes the history
+// of notifications sent for an account.
+type NotificationHistory struct {
+	ID            string    `json:"id"`
+	Name          string    `json:"name"`
+	Description   string    `json:"description"`
+	AlertBody     string    `json:"alert_body"`
+	AlertType     string    `json:"alert_type"`
+	Mechanism     string    `json:"mechanism"`
+	MechanismType string    `json:"mechanism_type"`
+	Sent          time.Time `json:"sent"`
+}
+
+// NotificationHistoryResponse describes the notification history
+// response for an account for a specific time period.
+type NotificationHistoryResponse struct {
+	Response
+	ResultInfo `json:"result_info"`
+	Result     []NotificationHistory
 }
 
 // ListNotificationPolicies will return the notification policies
@@ -346,25 +369,6 @@ func (api *API) ListPagerDutyNotificationDestinations(ctx context.Context, accou
 	return r, nil
 }
 
-// DeletePagerDutyNotificationDestinations will delete the pagerduty
-// destination connected for an account.
-//
-// API Reference: https://api.cloudflare.com/#notification-destinations-with-pagerduty-delete-pagerduty-destinations
-func (api *API) DeletePagerDutyNotificationDestinations(ctx context.Context, accountID string) (Response, error) {
-	baseURL := fmt.Sprintf("/accounts/%s/alerting/v3/destinations/pagerduty", accountID)
-
-	res, err := api.makeRequestContext(ctx, http.MethodDelete, baseURL, nil)
-	if err != nil {
-		return Response{}, err
-	}
-	var r Response
-	err = json.Unmarshal(res, &r)
-	if err != nil {
-		return r, err
-	}
-	return r, nil
-}
-
 // GetEligibleNotificationDestinations will return the types of
 // destinations an account is eligible to configure.
 //
@@ -401,6 +405,38 @@ func (api *API) GetAvailableNotificationTypes(ctx context.Context, accountID str
 		return r, err
 	}
 	return r, nil
+}
+
+// ListNotificationHistory will return the history of alerts sent for
+// a given account. The time period varies based on zone plan.
+// Free, Biz, Pro = 30 days
+// Ent = 90 days
+//
+// API Reference: https://api.cloudflare.com/#notification-history-list-history
+func (api *API) ListNotificationHistory(ctx context.Context, accountID string, pageOpts PaginationOptions) ([]NotificationHistory, ResultInfo, error) {
+	v := url.Values{}
+	if pageOpts.PerPage > 0 {
+		v.Set("per_page", strconv.Itoa(pageOpts.PerPage))
+	}
+	if pageOpts.Page > 0 {
+		v.Set("page", strconv.Itoa(pageOpts.Page))
+	}
+
+	baseURL := fmt.Sprintf("/accounts/%s/alerting/v3/history", accountID)
+	if len(v) > 0 {
+		baseURL = fmt.Sprintf("%s?%s", baseURL, v.Encode())
+	}
+
+	res, err := api.makeRequestContext(ctx, http.MethodGet, baseURL, nil)
+	if err != nil {
+		return []NotificationHistory{}, ResultInfo{}, err
+	}
+	var r NotificationHistoryResponse
+	err = json.Unmarshal(res, &r)
+	if err != nil {
+		return []NotificationHistory{}, ResultInfo{}, err
+	}
+	return r.Result, r.ResultInfo, nil
 }
 
 // unmarshal will unmarshal bytes and return a SaveResponse

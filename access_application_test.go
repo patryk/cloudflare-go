@@ -35,7 +35,12 @@ func TestAccessApplications(t *testing.T) {
 					"auto_redirect_to_identity": false,
 					"enable_binding_cookie": false,
 					"custom_deny_url": "https://www.cloudflare.com",
-					"custom_deny_message": "denied!"
+					"custom_deny_message": "denied!",
+					"http_only_cookie_attribute": true,
+					"same_site_cookie_attribute": "strict",
+					"logo_url": "https://www.cloudflare.com/example.png",
+					"skip_interstitial": true,
+					"app_launcher_visible": true
 				}
 			],
 			"result_info": {
@@ -52,19 +57,24 @@ func TestAccessApplications(t *testing.T) {
 	updatedAt, _ := time.Parse(time.RFC3339, "2014-01-01T05:20:00.12345Z")
 
 	want := []AccessApplication{{
-		ID:                     "480f4f69-1a28-4fdd-9240-1ed29f0ac1db",
-		CreatedAt:              &createdAt,
-		UpdatedAt:              &updatedAt,
-		AUD:                    "737646a56ab1df6ec9bddc7e5ca84eaf3b0768850f3ffb5d74f1534911fe3893",
-		Name:                   "Admin Site",
-		Domain:                 "test.example.com/admin",
-		Type:                   "self_hosted",
-		SessionDuration:        "24h",
-		AllowedIdps:            []string{"f174e90a-fafe-4643-bbbc-4a0ed4fc8415"},
-		AutoRedirectToIdentity: false,
-		EnableBindingCookie:    false,
-		CustomDenyMessage:      "denied!",
-		CustomDenyURL:          "https://www.cloudflare.com",
+		ID:                      "480f4f69-1a28-4fdd-9240-1ed29f0ac1db",
+		CreatedAt:               &createdAt,
+		UpdatedAt:               &updatedAt,
+		AUD:                     "737646a56ab1df6ec9bddc7e5ca84eaf3b0768850f3ffb5d74f1534911fe3893",
+		Name:                    "Admin Site",
+		Domain:                  "test.example.com/admin",
+		Type:                    "self_hosted",
+		SessionDuration:         "24h",
+		AllowedIdps:             []string{"f174e90a-fafe-4643-bbbc-4a0ed4fc8415"},
+		AutoRedirectToIdentity:  false,
+		EnableBindingCookie:     false,
+		AppLauncherVisible:     true,
+		CustomDenyMessage:       "denied!",
+		CustomDenyURL:           "https://www.cloudflare.com",
+		SameSiteCookieAttribute: "strict",
+		HttpOnlyCookieAttribute: true,
+		LogoURL:                 "https://www.cloudflare.com/example.png",
+		SkipInterstitial:        true,
 	}}
 
 	mux.HandleFunc("/accounts/"+testAccountID+"/access/apps", handler)
@@ -108,7 +118,10 @@ func TestAccessApplication(t *testing.T) {
 				"auto_redirect_to_identity": false,
 				"enable_binding_cookie": false,
 				"custom_deny_url": "https://www.cloudflare.com",
-				"custom_deny_message": "denied!"
+				"custom_deny_message": "denied!",
+				"logo_url": "https://www.cloudflare.com/example.png",
+				"skip_interstitial": true,
+				"app_launcher_visible": true
 			}
 		}
 		`)
@@ -129,8 +142,11 @@ func TestAccessApplication(t *testing.T) {
 		AllowedIdps:            []string{"f174e90a-fafe-4643-bbbc-4a0ed4fc8415"},
 		AutoRedirectToIdentity: false,
 		EnableBindingCookie:    false,
+		AppLauncherVisible:     true,
 		CustomDenyMessage:      "denied!",
 		CustomDenyURL:          "https://www.cloudflare.com",
+		LogoURL:                "https://www.cloudflare.com/example.png",
+		SkipInterstitial:       true,
 	}
 
 	mux.HandleFunc("/accounts/"+testAccountID+"/access/apps/480f4f69-1a28-4fdd-9240-1ed29f0ac1db", handler)
@@ -174,7 +190,10 @@ func TestCreateAccessApplications(t *testing.T) {
 				"auto_redirect_to_identity": false,
 				"enable_binding_cookie": false,
 				"custom_deny_url": "https://www.cloudflare.com",
-				"custom_deny_message": "denied!"
+				"custom_deny_message": "denied!",
+				"logo_url": "https://www.cloudflare.com/example.png",
+				"skip_interstitial": true,
+				"app_launcher_visible": true
 			}
 		}
 		`)
@@ -192,8 +211,11 @@ func TestCreateAccessApplications(t *testing.T) {
 		AllowedIdps:            []string{"f174e90a-fafe-4643-bbbc-4a0ed4fc8415"},
 		AutoRedirectToIdentity: false,
 		EnableBindingCookie:    false,
+		AppLauncherVisible:     true,
 		CustomDenyMessage:      "denied!",
 		CustomDenyURL:          "https://www.cloudflare.com",
+		LogoURL:                "https://www.cloudflare.com/example.png",
+		SkipInterstitial:       true,
 		CreatedAt:              &createdAt,
 		UpdatedAt:              &updatedAt,
 	}
@@ -247,7 +269,10 @@ func TestUpdateAccessApplication(t *testing.T) {
 				"auto_redirect_to_identity": false,
 				"enable_binding_cookie": false,
 				"custom_deny_url": "https://www.cloudflare.com",
-				"custom_deny_message": "denied!"
+				"custom_deny_message": "denied!",
+				"logo_url": "https://www.cloudflare.com/example.png",
+				"skip_interstitial": true,
+				"app_launcher_visible": true
 			}
 		}
 		`)
@@ -265,8 +290,11 @@ func TestUpdateAccessApplication(t *testing.T) {
 		AllowedIdps:            []string{"f174e90a-fafe-4643-bbbc-4a0ed4fc8415"},
 		AutoRedirectToIdentity: false,
 		EnableBindingCookie:    false,
+		AppLauncherVisible:     true,
 		CustomDenyMessage:      "denied!",
 		CustomDenyURL:          "https://www.cloudflare.com",
+		LogoURL:                "https://www.cloudflare.com/example.png",
+		SkipInterstitial:       true,
 		CreatedAt:              &createdAt,
 		UpdatedAt:              &updatedAt,
 	}

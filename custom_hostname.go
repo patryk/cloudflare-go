@@ -29,9 +29,11 @@ const (
 // CustomHostnameSSLSettings represents the SSL settings for a custom hostname.
 type CustomHostnameSSLSettings struct {
 	HTTP2         string   `json:"http2,omitempty"`
+	HTTP3         string   `json:"http3,omitempty"`
 	TLS13         string   `json:"tls_1_3,omitempty"`
 	MinTLSVersion string   `json:"min_tls_version,omitempty"`
 	Ciphers       []string `json:"ciphers,omitempty"`
+	EarlyHints    string   `json:"early_hints,omitempty"`
 }
 
 //CustomHostnameOwnershipVerification represents ownership verification status of a given custom hostname.
@@ -76,6 +78,7 @@ type CustomHostname struct {
 	ID                        string                                  `json:"id,omitempty"`
 	Hostname                  string                                  `json:"hostname,omitempty"`
 	CustomOriginServer        string                                  `json:"custom_origin_server,omitempty"`
+	CustomOriginSNI           string                                  `json:"custom_origin_sni,omitempty"`
 	SSL                       *CustomHostnameSSL                      `json:"ssl,omitempty"`
 	CustomMetadata            CustomMetadata                          `json:"custom_metadata,omitempty"`
 	Status                    CustomHostnameStatus                    `json:"status,omitempty"`

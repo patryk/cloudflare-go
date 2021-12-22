@@ -17,13 +17,18 @@ const (
 	RulesetKindSchema  RulesetKind = "schema"
 	RulesetKindZone    RulesetKind = "zone"
 
-	RulesetPhaseDDoSL7                     RulesetPhase = "ddos_l7"
-	RulesetPhaseHTTPRequestFirewallCustom  RulesetPhase = "http_request_firewall_custom"
-	RulesetPhaseHTTPRequestFirewallManaged RulesetPhase = "http_request_firewall_managed"
-	RulesetPhaseHTTPRequestMain            RulesetPhase = "http_request_main"
-	RulesetPhaseHTTPRequestSanitize        RulesetPhase = "http_request_sanitize"
-	RulesetPhaseHTTPRequestTransform       RulesetPhase = "http_request_transform"
-	RulesetPhaseMagicTransit               RulesetPhase = "magic_transit"
+	RulesetPhaseDDoSL4                       RulesetPhase = "ddos_l4"
+	RulesetPhaseDDoSL7                       RulesetPhase = "ddos_l7"
+	RulesetPhaseHTTPRequestFirewallCustom    RulesetPhase = "http_request_firewall_custom"
+	RulesetPhaseHTTPRequestFirewallManaged   RulesetPhase = "http_request_firewall_managed"
+	RulesetPhaseHTTPRequestLateTransform     RulesetPhase = "http_request_late_transform"
+	RulesetPhaseHTTPRequestMain              RulesetPhase = "http_request_main"
+	RulesetPhaseHTTPRequestSanitize          RulesetPhase = "http_request_sanitize"
+	RulesetPhaseHTTPRequestTransform         RulesetPhase = "http_request_transform"
+	RulesetPhaseHTTPResponseHeadersTransform RulesetPhase = "http_response_headers_transform"
+	RulesetPhaseHTTPResponseFirewallManaged  RulesetPhase = "http_response_firewall_managed"
+	RulesetPhaseMagicTransit                 RulesetPhase = "magic_transit"
+	RulesetPhaseRateLimit                    RulesetPhase = "http_ratelimit"
 
 	RulesetRuleActionBlock                RulesetRuleAction = "block"
 	RulesetRuleActionChallenge            RulesetRuleAction = "challenge"
@@ -64,13 +69,18 @@ func RulesetKindValues() []string {
 // of strings.
 func RulesetPhaseValues() []string {
 	return []string{
+		string(RulesetPhaseDDoSL4),
 		string(RulesetPhaseDDoSL7),
 		string(RulesetPhaseHTTPRequestFirewallCustom),
 		string(RulesetPhaseHTTPRequestFirewallManaged),
+		string(RulesetPhaseHTTPRequestLateTransform),
 		string(RulesetPhaseHTTPRequestMain),
 		string(RulesetPhaseHTTPRequestSanitize),
 		string(RulesetPhaseHTTPRequestTransform),
+		string(RulesetPhaseHTTPResponseHeadersTransform),
+		string(RulesetPhaseHTTPResponseFirewallManaged),
 		string(RulesetPhaseMagicTransit),
+		string(RulesetPhaseRateLimit),
 	}
 }
 
@@ -151,26 +161,30 @@ type Ruleset struct {
 // RulesetRuleActionParameters specifies the action parameters for a Ruleset
 // rule.
 type RulesetRuleActionParameters struct {
-	ID        string                                           `json:"id,omitempty"`
-	Ruleset   string                                           `json:"ruleset,omitempty"`
-	Increment int                                              `json:"increment,omitempty"`
-	URI       *RulesetRuleActionParametersURI                  `json:"uri,omitempty"`
-	Headers   map[string]RulesetRuleActionParametersHTTPHeader `json:"headers,omitempty"`
-	Products  []string                                         `json:"products,omitempty"`
-	Overrides *RulesetRuleActionParametersOverrides            `json:"overrides,omitempty"`
-	Rules     []RulesetRuleActionParametersRules               `json:"rules,omitempty"`
+	ID          string                                           `json:"id,omitempty"`
+	Ruleset     string                                           `json:"ruleset,omitempty"`
+	Rulesets    []string                                         `json:"rulesets,omitempty"`
+	Rules       map[string][]string                              `json:"rules,omitempty"`
+	Increment   int                                              `json:"increment,omitempty"`
+	URI         *RulesetRuleActionParametersURI                  `json:"uri,omitempty"`
+	Headers     map[string]RulesetRuleActionParametersHTTPHeader `json:"headers,omitempty"`
+	Products    []string                                         `json:"products,omitempty"`
+	Overrides   *RulesetRuleActionParametersOverrides            `json:"overrides,omitempty"`
+	MatchedData *RulesetRuleActionParametersMatchedData          `json:"matched_data,omitempty"`
+	Version     string                                           `json:"version,omitempty"`
 }
 
 // RulesetRuleActionParametersURI holds the URI struct for an action parameter.
 type RulesetRuleActionParametersURI struct {
-	Path   RulesetRuleActionParametersURIPath  `json:"path,omitempty"`
-	Query  RulesetRuleActionParametersURIQuery `json:"query,omitempty"`
-	Origin bool                                `json:"origin,omitempty"`
+	Path   *RulesetRuleActionParametersURIPath  `json:"path,omitempty"`
+	Query  *RulesetRuleActionParametersURIQuery `json:"query,omitempty"`
+	Origin bool                                 `json:"origin,omitempty"`
 }
 
 // RulesetRuleActionParametersURIPath holds the path specific portion of a URI
 // action parameter.
 type RulesetRuleActionParametersURIPath struct {
+	Value      string `json:"value,omitempty"`
 	Expression string `json:"expression,omitempty"`
 }
 
@@ -190,7 +204,8 @@ type RulesetRuleActionParametersHTTPHeader struct {
 }
 
 type RulesetRuleActionParametersOverrides struct {
-	Enabled    bool                                    `json:"enabled,omitempty"`
+	Enabled    *bool                                   `json:"enabled,omitempty"`
+	Action     string                                  `json:"action,omitempty"`
 	Categories []RulesetRuleActionParametersCategories `json:"categories,omitempty"`
 	Rules      []RulesetRuleActionParametersRules      `json:"rules,omitempty"`
 }
@@ -202,24 +217,52 @@ type RulesetRuleActionParametersCategories struct {
 }
 
 type RulesetRuleActionParametersRules struct {
-	ID             string `json:"id"`
-	Action         string `json:"action,omitempty"`
-	Enabled        bool   `json:"enabled"`
-	ScoreThreshold int    `json:"score_threshold,omitempty"`
+	ID               string `json:"id"`
+	Action           string `json:"action,omitempty"`
+	Enabled          *bool  `json:"enabled,omitempty"`
+	ScoreThreshold   int    `json:"score_threshold,omitempty"`
+	SensitivityLevel string `json:"sensitivity_level,omitempty"`
+}
+
+// RulesetRuleActionParametersMatchedData holds the structure for WAF based
+// payload logging.
+type RulesetRuleActionParametersMatchedData struct {
+	PublicKey string `json:"public_key,omitempty"`
 }
 
 // RulesetRule contains information about a single Ruleset Rule.
 type RulesetRule struct {
-	ID               string                       `json:"id,omitempty"`
-	Version          string                       `json:"version,omitempty"`
-	Action           string                       `json:"action"`
-	ActionParameters *RulesetRuleActionParameters `json:"action_parameters,omitempty"`
-	Expression       string                       `json:"expression"`
-	Description      string                       `json:"description"`
-	LastUpdated      *time.Time                   `json:"last_updated,omitempty"`
-	Ref              string                       `json:"ref,omitempty"`
-	Enabled          bool                         `json:"enabled"`
-	ScoreThreshold   int                          `json:"score_threshold,omitempty"`
+	ID                     string                             `json:"id,omitempty"`
+	Version                string                             `json:"version,omitempty"`
+	Action                 string                             `json:"action"`
+	ActionParameters       *RulesetRuleActionParameters       `json:"action_parameters,omitempty"`
+	Expression             string                             `json:"expression"`
+	Description            string                             `json:"description"`
+	LastUpdated            *time.Time                         `json:"last_updated,omitempty"`
+	Ref                    string                             `json:"ref,omitempty"`
+	Enabled                bool                               `json:"enabled"`
+	ScoreThreshold         int                                `json:"score_threshold,omitempty"`
+	RateLimit              *RulesetRuleRateLimit              `json:"ratelimit,omitempty"`
+	ExposedCredentialCheck *RulesetRuleExposedCredentialCheck `json:"exposed_credential_check,omitempty"`
+}
+
+// RulesetRuleRateLimit contains the structure of a HTTP rate limit Ruleset Rule.
+type RulesetRuleRateLimit struct {
+	Characteristics   []string `json:"characteristics,omitempty"`
+	RequestsPerPeriod int      `json:"requests_per_period,omitempty"`
+	Period            int      `json:"period,omitempty"`
+	MitigationTimeout int      `json:"mitigation_timeout,omitempty"`
+
+	// Should always be sent as "" will trigger the service to use the Ruleset
+	// expression instead.
+	MitigationExpression string `json:"mitigation_expression"`
+}
+
+// RulesetRuleExposedCredentialCheck contains the structure of an exposed
+// credential check Ruleset Rule.
+type RulesetRuleExposedCredentialCheck struct {
+	UsernameExpression string `json:"username_expression,omitempty"`
+	PasswordExpression string `json:"password_expression,omitempty"`
 }
 
 // UpdateRulesetRequest is the representation of a Ruleset update.

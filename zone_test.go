@@ -1338,6 +1338,34 @@ func TestUpdateZoneDNSSEC(t *testing.T) {
 	}
 }
 
+func TestZoneSetType(t *testing.T) {
+	setup()
+	defer teardown()
+
+	handler := func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, http.MethodPatch, r.Method, "Expected method 'PATCH', got %s", r.Method)
+
+		w.Header().Set("content-type", "application/json")
+		fmt.Fprintf(w, `{
+			"result": {
+				"type": "partial",
+				"verification_key": "000000000-000000000",
+				"modified_on": "2014-01-01T05:20:00Z"
+				}
+		}`)
+	}
+
+	mux.HandleFunc("/zones/foo", handler)
+
+	z, err := client.ZoneSetType(context.Background(), "foo", "partial")
+	if assert.NoError(t, err) {
+		assert.Equal(t, z.Type, "partial")
+		assert.Equal(t, z.VerificationKey, "000000000-000000000")
+		time, _ := time.Parse("2006-01-02T15:04:05Z", "2014-01-01T05:20:00Z")
+		assert.Equal(t, z.ModifiedOn, time)
+	}
+}
+
 func parsePage(t *testing.T, total int, s string) (int, bool) {
 	if s == "" {
 		return 1, true
@@ -1384,16 +1412,9 @@ func TestListZones(t *testing.T) {
 			count = total - start
 		}
 
-		res, err := json.Marshal(mockZonesResponse(total, page, start, count))
-		if !assert.NoError(t, err) {
-			return
-		}
-
 		w.Header().Set("content-type", "application/json")
-
-		if _, err = w.Write(res); assert.NoError(t, err) {
-			return
-		}
+		err := json.NewEncoder(w).Encode(mockZonesResponse(total, page, start, count))
+		assert.NoError(t, err)
 	}
 
 	mux.HandleFunc("/zones", handler)
@@ -1443,16 +1464,9 @@ func TestListZonesFailingPages(t *testing.T) {
 			count = total - start
 		}
 
-		res, err := json.Marshal(mockZonesResponse(total, page, start, count))
-		if !assert.NoError(t, err) {
-			return
-		}
-
 		w.Header().Set("content-type", "application/json")
-
-		if _, err = w.Write(res); assert.NoError(t, err) {
-			return
-		}
+		err := json.NewEncoder(w).Encode(mockZonesResponse(total, page, start, count))
+		assert.NoError(t, err)
 	}
 
 	mux.HandleFunc("/zones", handler)
@@ -1469,4 +1483,30 @@ func TestListZonesContextManualPagination1(t *testing.T) {
 func TestListZonesContextManualPagination2(t *testing.T) {
 	_, err := client.ListZonesContext(context.Background(), WithPagination(PaginationOptions{PerPage: 30}))
 	assert.EqualError(t, err, errManualPagination)
+}
+
+func TestUpdateZoneSSLSettings(t *testing.T) {
+	setup()
+	defer teardown()
+	handler := func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, http.MethodPatch, r.Method, "Expected method 'PATCH', got %s", r.Method)
+		w.Header().Set("content-type", "application/json")
+		// JSON data from: https://api.cloudflare.com/#zone-settings-properties
+		_, _ = fmt.Fprintf(w, `{
+			"result": {
+				"id": "ssl",
+				"value": "off",
+				"editable": true,
+				"modified_on": "2014-01-01T05:20:00.12345Z"
+			}
+		}`)
+	}
+	mux.HandleFunc("/zones/foo/settings/ssl", handler)
+	s, err := client.UpdateZoneSSLSettings(context.Background(), "foo", "off")
+	if assert.NoError(t, err) {
+		assert.Equal(t, s.ID, "ssl")
+		assert.Equal(t, s.Value, "off")
+		assert.Equal(t, s.Editable, true)
+		assert.Equal(t, s.ModifiedOn, "2014-01-01T05:20:00.12345Z")
+	}
 }

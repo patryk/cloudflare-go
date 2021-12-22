@@ -19,6 +19,10 @@ var (
 	updatedAt, _ = time.Parse(time.RFC3339, "2014-01-01T05:20:00.12345Z")
 	expiresAt, _ = time.Parse(time.RFC3339, "2015-01-01T05:20:00.12345Z")
 
+	purposeJustificationRequired = true
+	purposeJustificationPrompt   = "Please provide a business reason for your need to access before continuing."
+	approvalRequired             = true
+
 	expectedAccessPolicy = AccessPolicy{
 		ID:         "699d98642c564d2e855e9661899b7252",
 		Precedence: 1,
@@ -34,6 +38,19 @@ var (
 		},
 		Require: []interface{}{
 			map[string]interface{}{"email": map[string]interface{}{"email": "test@example.com"}},
+		},
+		PurposeJustificationRequired: &purposeJustificationRequired,
+		ApprovalRequired:             &approvalRequired,
+		PurposeJustificationPrompt:   &purposeJustificationPrompt,
+		ApprovalGroups: []AccessApprovalGroup{
+			{
+				EmailListUuid:   "2413b6d7-bbe5-48bd-8fbb-e52069c85561",
+				ApprovalsNeeded: 3,
+			},
+			{
+				EmailAddresses:  []string{"email1@example.com", "email2@example.com"},
+				ApprovalsNeeded: 1,
+			},
 		},
 	}
 )
@@ -76,6 +93,19 @@ func TestAccessPolicies(t *testing.T) {
 							"email": {
 								"email": "test@example.com"
 							}
+						}
+					],
+					"purpose_justification_required": true,
+					"purpose_justification_prompt": "Please provide a business reason for your need to access before continuing.",
+					"approval_required": true,
+					"approval_groups": [
+						{
+							"email_list_uuid": "2413b6d7-bbe5-48bd-8fbb-e52069c85561",
+							"approvals_needed": 3
+						},
+						{
+							"email_addresses": ["email1@example.com", "email2@example.com"],
+							"approvals_needed": 1
 						}
 					]
 				}
@@ -145,6 +175,19 @@ func TestAccessPolicy(t *testing.T) {
 							"email": "test@example.com"
 						}
 					}
+				],
+				"purpose_justification_required": true,
+				"purpose_justification_prompt": "Please provide a business reason for your need to access before continuing.",
+				"approval_required": true,
+				"approval_groups": [
+					{
+						"email_list_uuid": "2413b6d7-bbe5-48bd-8fbb-e52069c85561",
+						"approvals_needed": 3
+					},
+					{
+						"email_addresses": ["email1@example.com", "email2@example.com"],
+						"approvals_needed": 1
+					}
 				]
 			}
 		}
@@ -206,6 +249,19 @@ func TestCreateAccessPolicy(t *testing.T) {
 							"email": "test@example.com"
 						}
 					}
+				],
+				"purpose_justification_required": true,
+				"purpose_justification_prompt": "Please provide a business reason for your need to access before continuing.",
+				"approval_required": true,
+				"approval_groups": [
+					{
+						"email_list_uuid": "2413b6d7-bbe5-48bd-8fbb-e52069c85561",
+						"approvals_needed": 3
+					},
+					{
+						"email_addresses": ["email1@example.com", "email2@example.com"],
+						"approvals_needed": 1
+					}
 				]
 			}
 		}
@@ -229,7 +285,19 @@ func TestCreateAccessPolicy(t *testing.T) {
 				Email string `json:"email"`
 			}{Email: "test@example.com"}},
 		},
-		Decision: "allow",
+		Decision:                     "allow",
+		PurposeJustificationRequired: &purposeJustificationRequired,
+		PurposeJustificationPrompt:   &purposeJustificationPrompt,
+		ApprovalGroups: []AccessApprovalGroup{
+			{
+				EmailListUuid:   "2413b6d7-bbe5-48bd-8fbb-e52069c85561",
+				ApprovalsNeeded: 3,
+			},
+			{
+				EmailAddresses:  []string{"email1@example.com", "email2@example.com"},
+				ApprovalsNeeded: 1,
+			},
+		},
 	}
 
 	mux.HandleFunc("/accounts/"+testAccountID+"/access/apps/"+accessApplicationID+"/policies", handler)
@@ -286,6 +354,19 @@ func TestUpdateAccessPolicy(t *testing.T) {
 						"email": {
 							"email": "test@example.com"
 						}
+					}
+				],
+				"purpose_justification_required": true,
+				"purpose_justification_prompt": "Please provide a business reason for your need to access before continuing.",
+				"approval_required": true,
+				"approval_groups": [
+					{
+						"email_list_uuid": "2413b6d7-bbe5-48bd-8fbb-e52069c85561",
+						"approvals_needed": 3
+					},
+					{
+						"email_addresses": ["email1@example.com", "email2@example.com"],
+						"approvals_needed": 1
 					}
 				]
 			}

@@ -258,6 +258,8 @@ type PurgeCacheRequest struct {
 	Tags []string `json:"tags,omitempty"`
 	// Purge by hostname - e.g. "assets.example.com"
 	Hosts []string `json:"hosts,omitempty"`
+	// Purge by prefix - e.g. "example.com/css"
+	Prefixes []string `json:"prefixes,omitempty"`
 }
 
 // PurgeCacheResponse represents the response from the purge endpoint.
@@ -521,12 +523,28 @@ type ZoneOptions struct {
 	Paused   *bool     `json:"paused,omitempty"`
 	VanityNS []string  `json:"vanity_name_servers,omitempty"`
 	Plan     *ZonePlan `json:"plan,omitempty"`
+	Type     string    `json:"type,omitempty"`
 }
 
 // ZoneSetPaused pauses Cloudflare service for the entire zone, sending all
 // traffic direct to the origin.
 func (api *API) ZoneSetPaused(ctx context.Context, zoneID string, paused bool) (Zone, error) {
 	zoneopts := ZoneOptions{Paused: &paused}
+	zone, err := api.EditZone(ctx, zoneID, zoneopts)
+	if err != nil {
+		return Zone{}, err
+	}
+
+	return zone, nil
+}
+
+// ZoneSetType toggles the type for an existing zone.
+//
+// Valid values for `type` are "full" and "partial"
+//
+// API reference: https://api.cloudflare.com/#zone-edit-zone
+func (api *API) ZoneSetType(ctx context.Context, zoneID string, zoneType string) (Zone, error) {
+	zoneopts := ZoneOptions{Type: zoneType}
 	zone, err := api.EditZone(ctx, zoneID, zoneopts)
 	if err != nil {
 		return Zone{}, err
@@ -589,7 +607,7 @@ func (api *API) ZoneUpdatePlan(ctx context.Context, zoneID string, planType stri
 
 // EditZone edits the given zone.
 //
-// This is usually called by ZoneSetPaused or ZoneSetVanityNS.
+// This is usually called by ZoneSetPaused, ZoneSetType, or ZoneSetVanityNS.
 //
 // API reference: https://api.cloudflare.com/#zone-edit-zone-properties
 func (api *API) EditZone(ctx context.Context, zoneID string, zoneOpts ZoneOptions) (Zone, error) {
@@ -614,7 +632,7 @@ func (api *API) EditZone(ctx context.Context, zoneID string, zoneOpts ZoneOption
 // API reference: https://api.cloudflare.com/#zone-purge-all-files
 func (api *API) PurgeEverything(ctx context.Context, zoneID string) (PurgeCacheResponse, error) {
 	uri := fmt.Sprintf("/zones/%s/purge_cache", zoneID)
-	res, err := api.makeRequestContext(ctx, http.MethodPost, uri, PurgeCacheRequest{true, nil, nil, nil})
+	res, err := api.makeRequestContext(ctx, http.MethodPost, uri, PurgeCacheRequest{true, nil, nil, nil, nil})
 	if err != nil {
 		return PurgeCacheResponse{}, err
 	}
@@ -806,6 +824,23 @@ func (api *API) ZoneSSLSettings(ctx context.Context, zoneID string) (ZoneSSLSett
 	return r.Result, nil
 }
 
+// UpdateZoneSSLSettings update information about SSL setting to the specified zone.
+//
+// API reference: https://api.cloudflare.com/#zone-settings-change-ssl-setting
+func (api *API) UpdateZoneSSLSettings(ctx context.Context, zoneID string, sslValue string) (ZoneSSLSetting, error) {
+	uri := fmt.Sprintf("/zones/%s/settings/ssl", zoneID)
+	res, err := api.makeRequestContext(ctx, http.MethodPatch, uri, ZoneSSLSetting{Value: sslValue})
+	if err != nil {
+		return ZoneSSLSetting{}, err
+	}
+	var r ZoneSSLSettingResponse
+	err = json.Unmarshal(res, &r)
+	if err != nil {
+		return ZoneSSLSetting{}, errors.Wrap(err, errUnmarshalError)
+	}
+	return r.Result, nil
+}
+
 // FallbackOrigin returns information about the fallback origin for the specified zone.
 //
 // API reference: https://developers.cloudflare.com/ssl/ssl-for-saas/api-calls/#fallback-origin-configuration
@@ -848,6 +883,11 @@ func (api *API) UpdateFallbackOrigin(ctx context.Context, zoneID string, fbo Fal
 // from Punycode to Unicode form. If the given zone name is not represented
 // as Punycode, or converting fails (for invalid representations), it
 // is returned unchanged.
+//
+// Because all the zone name comparison is currently done using the API service
+// (except for comparison with the empty string), theoretically, we could
+// remove this function from the Go library. However, there should be no harm
+// calling this function other than gelable performance penalty.
 //
 // Note: conversion errors are silently discarded.
 func normalizeZoneName(name string) string {
